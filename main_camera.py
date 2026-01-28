@@ -2,25 +2,35 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 
-#img = cv2.imread('t1_page-0001.jpg')
-img = cv2.imread('image.png')
+# Open camera (0 is usually the default camera)
+cap = cv2.VideoCapture(0)
 
+if not cap.isOpened():
+    print("Error: Could not open camera.")
+    exit()
 
-if img is None:
-    print("Error: Could not load image.")
-else:
+print("Camera opened. Press 'q' to quit.")
+
+# Correct dictionary creation
+aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
+
+# Generate marker (only needed once)
+marker_image = aruco.generateImageMarker(aruco_dict, 0, 200)
+cv2.imwrite("marker123.png", marker_image)
+
+parameters = aruco.DetectorParameters()
+detector = aruco.ArucoDetector(aruco_dict, parameters)
+
+while True:
+    # Capture frame from camera
+    ret, img = cap.read()
+    
+    if not ret:
+        print("Error: Could not read frame.")
+        break
+    
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    cv2.imshow('Image', gray)
-
-    # Correct dictionary creation
-    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_100)
-
-    # Generate marker
-    marker_image = aruco.generateImageMarker(aruco_dict, 0, 200)
-    cv2.imwrite("marker123.png", marker_image)
-
-    parameters = aruco.DetectorParameters()
-    detector = aruco.ArucoDetector(aruco_dict, parameters)
+    cv2.imshow('Camera Feed', img)
 
     marker_corners, marker_ids, rejected = detector.detectMarkers(gray)
 
@@ -40,9 +50,9 @@ else:
         xs = corners[:, 0]
         ys = corners[:, 1]
 
-        min_x = int(xs.max()) + 5
+        min_x = int(xs.max())
         min_y = int(ys.min())
-        max_y = int(ys.max()) + 20
+        max_y = int(ys.max())
 
         # Crop everything to the right of the marker
         cropped = img[min_y:max_y, min_x:img.shape[1]]
@@ -112,9 +122,11 @@ else:
         
         print(f"\n✓ Filled box(es): {filled_boxes}")
         cv2.imshow("Detected Boxes", cropped_visual)
+    
+    # Check for 'q' key to quit
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-    else:
-        print("No markers detected.")
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+# Release camera and close windows
+cap.release()
+cv2.destroyAllWindows()
